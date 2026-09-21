@@ -1,16 +1,52 @@
-import cocotb
-from cocotb.triggers import Timer
+import subprocess
+import sys
 
-@cocotb.test()
-async def test_project(dut):
-    dut._log.info("Starting simulation...")
-    
-    # We do NOT drive the clock or inputs from Python (Cocotb) 
-    # because our Verilog testbench (tb.v) is already driving them!
-    # If we drive them here, it will cause a multiple-driver conflict.
-    
-    # Just wait for 2000 nanoseconds to give the Verilog tb.v time to run all its $display tests.
-    await Timer(2000, units="ns")
-    
-    dut._log.info("Verilog testbench finished successfully!")
-    assert True
+RTL = "tt_um_regex_matcher.v"
+TB  = "tb.v"
+OUT = "sim.out"
+
+print("Compiling...")
+
+compile_cmd = [
+    "iverilog",
+    "-g2012",
+    "-o", OUT,
+    RTL,
+    TB
+]
+
+result = subprocess.run(
+    compile_cmd,
+    capture_output=True,
+    text=True
+)
+
+if result.returncode != 0:
+    print("Compilation FAILED")
+    print(result.stdout)
+    print(result.stderr)
+    sys.exit(1)
+
+print("Compilation successful.")
+print()
+print("Running simulation...")
+print("----------------------------------------------")
+
+result = subprocess.run(
+    ["vvp", OUT],
+    capture_output=True,
+    text=True
+)
+
+print(result.stdout)
+
+if result.stderr:
+    print("Simulation stderr:")
+    print(result.stderr)
+
+if result.returncode != 0:
+    print("Simulation FAILED")
+    sys.exit(1)
+
+print("----------------------------------------------")
+print("Simulation completed successfully.")
